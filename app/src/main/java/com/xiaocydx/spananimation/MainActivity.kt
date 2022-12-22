@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
             .adapter(createAnimationAdapter())
 
         val controller = SpanAnimationController(rvAnimation).apply {
+            // setSpanCounts(2, 3, 4, 8)
             setScaleGestureEnabled(true)
             setImageViewProvider { (this as? SpanContentHolder)?.view?.imageView }
         }

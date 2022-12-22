@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
  * @date 2022/12/18
  */
 class SpanAnimationController(internal val rv: RecyclerView) {
+    private var spanCounts = emptyList<Int>()
     private var handler: SpanScaleGestureHandler? = null
     private val drawable = rv.spanAnimationDrawable
     private val layoutManager: GridLayoutManager?
@@ -46,14 +47,14 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     }
 
     /**
-     * 设置过渡到指定`spanCount`的动画时长，单位：ms
+     * 设置过渡到指定spanCount的动画时长，单位：ms
      */
     fun setAnimationDuration(duration: Long) {
         drawable.animationDuration = duration
     }
 
     /**
-     * 设置过渡到指定`spanCount`的动画插值器
+     * 设置过渡到指定spanCount的动画插值器
      */
     fun setAnimationInterpolator(interpolator: Interpolator) {
         drawable.animationInterpolator = interpolator
@@ -78,6 +79,14 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     }
 
     /**
+     * 设置参与过渡的spanCount组，[spanCounts]应当包含初始化spanCount
+     */
+    fun setSpanCounts(vararg spanCounts: Int) {
+        spanCounts.sort()
+        this.spanCounts = spanCounts.filter { it > 0 }.distinct()
+    }
+
+    /**
      * 从当前`spanCount`过渡到[spanCount]
      */
     fun go(spanCount: Int) {
@@ -86,11 +95,18 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     }
 
     fun increase() {
-        layoutManager?.let { go(spanCount = it.spanCount + 1) }
+        layoutManager?.let { go(getSpanCount(it.spanCount, sign = 1)) }
     }
 
     fun decrease() {
-        layoutManager?.let { go(spanCount = it.spanCount - 1) }
+        layoutManager?.let { go(getSpanCount(it.spanCount, sign = -1)) }
+    }
+
+    internal fun getSpanCount(spanCount: Int, sign: Int): Int {
+        var index = spanCounts.indexOf(spanCount)
+        if (index == -1) return (spanCount + sign)
+        index += sign
+        return spanCounts.getOrNull(index) ?: spanCount
     }
 
     private companion object {

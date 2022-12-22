@@ -52,15 +52,11 @@ internal class SpanScaleGestureHandler(
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val lm = rv.layoutManager as? GridLayoutManager
             if (lm != null && !captured && detector.scaleFactor != 1f) {
-                val spanCount = when {
-                    detector.scaleFactor > 1f -> lm.spanCount + 1
-                    detector.scaleFactor < 1f -> lm.spanCount - 1
-                    else -> throw AssertionError("scaleFactor出现断言异常")
-                }
-                if (spanCount >= 1) {
+                val sign = if (detector.scaleFactor > 1f) 1 else -1
+                val spanCount = controller.getSpanCount(lm.spanCount, sign)
+                if (spanCount != lm.spanCount && spanCount >= 1) {
                     minToMax = spanCount > lm.spanCount
                     scale = if (minToMax) MIN_SCALE else MAX_SCALE
-                    // 可变属性，实时获取
                     val provider = controller.capturedResultProvider
                     SpanAnimationRunner(start = false, spanCount, rv, lm, provider).begin()
                 }
