@@ -3,6 +3,10 @@ package com.xiaocydx.spananimation
 import android.animation.ValueAnimator
 import android.graphics.*
 import android.graphics.drawable.Drawable
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.Interpolator
 import androidx.core.animation.addListener
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
@@ -21,30 +25,92 @@ internal val RecyclerView.spanAnimationDrawable: SpanAnimationDrawable
 internal class SpanAnimationDrawable : Drawable() {
     private var startInfo: SpanAnimationInfo? = null
     private var endInto: SpanAnimationInfo? = null
-    private var progress = 0f
+    private var allowClear = true
+    private var progress = -1f
     private val dstRectF = RectF()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val animator = createAnimator()
+
     val isRunning: Boolean
         get() = animator.isRunning
+    val isInitialized: Boolean
+        get() = startInfo != null && endInto != null
 
-    fun startAnimation(startInfo: SpanAnimationInfo, endInto: SpanAnimationInfo) {
-        animator.end()
+    var animationDuration = 500L
+    var animationInterpolator: Interpolator = AccelerateDecelerateInterpolator()
+    var completeInterpolator: Interpolator = DecelerateInterpolator()
+    var drawingBitmapProvider: ((child: View) -> Bitmap?)? = null
+
+    fun begin(startInfo: SpanAnimationInfo, endInto: SpanAnimationInfo, start: Boolean) {
+        if (isRunning) animator.end()
         this.startInfo = startInfo
         this.endInto = endInto
-        animator.start()
+        setChildVisible(isVisible = false)
+        if (!start) return
+        animator.apply {
+            duration = animationDuration
+            interpolator = animationInterpolator
+            setFloatValues(0f, 1f)
+            start()
+        }
+    }
+
+    fun setProgress(progress: Float) {
+        if (isRunning) {
+            allowClear = false
+            animator.end()
+            allowClear = true
+        }
+        val safeProgress = progress
+            .coerceAtLeast(0f)
+            .coerceAtMost(1f)
+        when {
+            this.progress == safeProgress -> return
+            safeProgress == 1f -> {
+                setChildVisible(isVisible = true)
+                clear()
+            }
+            else -> {
+                this.progress = safeProgress
+                invalidateSelf()
+            }
+        }
+    }
+
+    fun complete() {
+        if (!isInitialized) return
+        val startProgress = progress
+        if (isRunning) {
+            allowClear = false
+            animator.end()
+            allowClear = true
+        }
+        animator.apply {
+            duration = (animationDuration * (1f - startProgress)).toLong()
+            interpolator = completeInterpolator
+            setFloatValues(startProgress, 1f)
+            start()
+        }
     }
 
     override fun draw(canvas: Canvas) {
         val startValues = startInfo?.values ?: return
         val endValues = endInto?.values ?: return
+        val progress = progress
+            .coerceAtLeast(0f)
+            .coerceAtMost(1f)
 
         val boundsWidth = bounds.width()
         val boundsHeight = bounds.height()
         for (index in startValues.indices) {
             val start = startValues[index]
             val end = endValues[index]
-            val bitmap = (start.bitmap ?: end.bitmap) ?: continue
+            var bitmap = (start.bitmap ?: end.bitmap) ?: continue
+            val child = start.child ?: end.child
+            if (child != null && drawingBitmapProvider != null) {
+                bitmap = drawingBitmapProvider!!.invoke(child) ?: bitmap
+            }
+            if (bitmap.isRecycled) continue
 
             val left = start.left + (end.left - start.left) * progress
             val top = start.top + (end.top - start.top) * progress
@@ -62,31 +128,34 @@ internal class SpanAnimationDrawable : Drawable() {
     }
 
     private fun createAnimator() = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 1000
         addUpdateListener {
             progress = it.animatedValue as Float
             invalidateSelf()
         }
         addListener(
             onStart = { setChildVisible(false) },
-            onCancel = { setChildVisible(true).release() },
-            onEnd = { setChildVisible(true).release() }
+            onCancel = { setChildVisible(true).clear() },
+            onEnd = { setChildVisible(true).clear() }
         )
     }
 
     private fun setChildVisible(isVisible: Boolean) = apply {
         val endValues = endInto?.values ?: return@apply
         for (index in endValues.indices) {
-            endValues[index].child?.isVisible = isVisible
+            val child = endValues[index].child
+            if (child != null && child.isVisible != isVisible) {
+                child.isVisible = isVisible
+            }
         }
     }
 
-    private fun release() {
-        startInfo?.release()
-        endInto?.release()
+    private fun clear() {
+        if (!allowClear) return
+        startInfo?.clear()
+        endInto?.clear()
         startInfo = null
         endInto = null
-        progress = 0f
+        progress = -1f
         dstRectF.setEmpty()
     }
 

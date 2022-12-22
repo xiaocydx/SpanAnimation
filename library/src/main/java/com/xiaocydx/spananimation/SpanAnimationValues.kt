@@ -28,13 +28,13 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         values?.forEach(action)
     }
 
-    fun release() {
-        forEach { _, animationValue -> animationValue.bitmap?.recycle() }
+    fun clear() {
+        forEach { _, animationValue -> animationValue.recycle() }
         values = null
     }
 
     fun matchAnimationValues(startSpanCount: Int, endSpanCount: Int, endValues: SpanAnimationValues): Boolean {
-        val state = SpanMatchAnimationState(startSpanCount, endSpanCount, endValues, SparseArray(2))
+        val state = SpanMatchState(startSpanCount, endSpanCount, endValues, SparseArray(2))
         matchAnimationValuesStep1(state)
         matchAnimationValuesStep2(state)
         matchAnimationValuesStep3(state)
@@ -43,12 +43,12 @@ internal class SpanAnimationValues(initialCapacity: Int) {
 
     /**
      * 匹配[SpanAnimationValues]的第一步：
-     * 1. 计算出遍历的起始和结束layoutPosition。
-     * 2. 计算出endValues的最大和最小layoutPosition。
-     * 3. 计算出startValues的childDimensions。
-     * 4. 计算出decoratedDimensions，尝试startValues和endValues两轮计算。
+     * 1. 计算遍历的起始和结束layoutPosition
+     * 2. 计算endValues的最大和最小layoutPosition
+     * 3. 计算startValues的childDimensions
+     * 4. 计算decoratedDimensions，尝试startValues和endValues两轮计算
      */
-    private fun matchAnimationValuesStep1(state: SpanMatchAnimationState) = with(state) {
+    private fun matchAnimationValuesStep1(state: SpanMatchState): Unit = with(state) {
         if (step != Step.STEP1) return
         val startValues = this@SpanAnimationValues
         startValues.calculateMinMaxLayoutPositions().also {
@@ -73,11 +73,11 @@ internal class SpanAnimationValues(initialCapacity: Int) {
 
     /**
      * 匹配[SpanAnimationValues]的第二步：
-     * 1. 匹配startValues的前部分[SpanAnimationValue]。
-     * 2. 匹配startValues的后部分[SpanAnimationValue]。
+     * 1. 匹配startValues的前部分[SpanAnimationValue]
+     * 2. 匹配startValues的后部分[SpanAnimationValue]
      */
     @Suppress("KotlinConstantConditions")
-    private fun matchAnimationValuesStep2(state: SpanMatchAnimationState) = with(state) {
+    private fun matchAnimationValuesStep2(state: SpanMatchState): Unit = with(state) {
         if (step != Step.STEP2) return
         var left: Int
         var top: Int
@@ -87,6 +87,7 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         var spanGroupIndex: Int
         val child: View? = null
         val bitmap: Bitmap? = null
+        val canRecycle = false
 
         while (firstLayoutPosition >= minLayoutPosition) {
             val layoutPosition = firstLayoutPosition
@@ -94,8 +95,8 @@ internal class SpanAnimationValues(initialCapacity: Int) {
             if (get(layoutPosition) != null) continue
             val endValue = endValues[layoutPosition]
             val nextValue = get(layoutPosition + 1)
-            requireNotNull(endValue) { "startLayoutPosition计算错误" }
-            requireNotNull(nextValue) { "startLayoutPosition计算错误" }
+            requireNotNull(endValue) { "firstLayoutPosition计算错误" }
+            requireNotNull(nextValue) { "firstLayoutPosition计算错误" }
 
             val viewType = endValue.viewType
             val childWidth = getChildWidth(viewType, endValue.width)
@@ -118,8 +119,10 @@ internal class SpanAnimationValues(initialCapacity: Int) {
                 bottom = top + childHeight
             }
 
-            set(layoutPosition, SpanAnimationValue(left, top, right, bottom,
-                spanSize, spanIndex, spanGroupIndex, child, bitmap, viewType, layoutPosition))
+            set(layoutPosition, SpanAnimationValue(
+                left, top, right, bottom,
+                spanSize, spanIndex, spanGroupIndex, child,
+                bitmap, viewType, canRecycle, layoutPosition))
         }
 
         while (lastLayoutPosition <= maxLayoutPosition) {
@@ -128,8 +131,8 @@ internal class SpanAnimationValues(initialCapacity: Int) {
             if (get(layoutPosition) != null) continue
             val endValue = endValues[layoutPosition]
             val prevValue = get(layoutPosition - 1)
-            requireNotNull(endValue) { "endLayoutPosition计算错误" }
-            requireNotNull(prevValue) { "endLayoutPosition计算错误" }
+            requireNotNull(endValue) { "lastLayoutPosition计算错误" }
+            requireNotNull(prevValue) { "lastLayoutPosition计算错误" }
 
             val viewType = endValue.viewType
             val childWidth = getChildWidth(viewType, endValue.width)
@@ -153,8 +156,10 @@ internal class SpanAnimationValues(initialCapacity: Int) {
                 bottom = top + childHeight
             }
 
-            set(layoutPosition, SpanAnimationValue(left, top, right, bottom,
-                spanSize, spanIndex, spanGroupIndex, child, bitmap, viewType, layoutPosition))
+            set(layoutPosition, SpanAnimationValue(
+                left, top, right, bottom,
+                spanSize, spanIndex, spanGroupIndex, child,
+                bitmap, viewType, canRecycle, layoutPosition))
         }
 
         step = Step.STEP3
@@ -162,9 +167,9 @@ internal class SpanAnimationValues(initialCapacity: Int) {
 
     /**
      * 匹配[SpanAnimationValues]的第三步：
-     * 若startValues.size大于endValues.size，则反转参数重新匹配，让endValues完整。
+     * 若startValues.size大于endValues.size，则反转参数重新匹配，让endValues完整
      */
-    private fun matchAnimationValuesStep3(state: SpanMatchAnimationState) = with(state) {
+    private fun matchAnimationValuesStep3(state: SpanMatchState): Unit = with(state) {
         if (step != Step.STEP3) return
         val startValues = this@SpanAnimationValues
         when {
@@ -188,21 +193,21 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         return intArrayOf(minLayoutPosition, maxLayoutPosition)
     }
 
-    private fun calculateChildDimensions(state: SpanMatchAnimationState) = with(state) {
+    private fun calculateChildDimensions(state: SpanMatchState) = with(state) {
         if (!checkMinMaxLayoutPositions() || checkChildDimensions()) return
         for (layoutPosition in minLayoutPosition..maxLayoutPosition) {
             val startValue = get(layoutPosition)
-            if (startValue?.child == null || startValue.isCalculatedValue) continue
+            if (startValue?.child == null || startValue.isCalculated) continue
             putChildDimensions(startValue.viewType, startValue.width, startValue.height)
         }
     }
 
-    private fun calculateDecoratedDimensions(state: SpanMatchAnimationState) = with(state) {
+    private fun calculateDecoratedDimensions(state: SpanMatchState) = with(state) {
         if (!checkMinMaxLayoutPositions() || checkDecoratedDimensions()) return
         var prevValue: SpanAnimationValue? = null
         for (layoutPosition in minLayoutPosition..maxLayoutPosition) {
             val startValue = get(layoutPosition)
-            if (startValue == null || startValue.isCalculatedValue) continue
+            if (startValue == null || startValue.isCalculated) continue
             if (decoratedWidth == NO_VALUE && prevValue != null
                     && prevValue.spanSize == 1 && startValue.spanSize == 1
                     && prevValue.spanGroupIndex == startValue.spanGroupIndex) {
@@ -217,7 +222,7 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         }
     }
 
-    private class SpanMatchAnimationState(
+    private class SpanMatchState(
         val startSpanCount: Int,
         val endSpanCount: Int,
         val endValues: SpanAnimationValues,
@@ -258,7 +263,7 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         }
     }
 
-    enum class Step {
+    private enum class Step {
         STEP1, STEP2, STEP3, COMPLETED
     }
 

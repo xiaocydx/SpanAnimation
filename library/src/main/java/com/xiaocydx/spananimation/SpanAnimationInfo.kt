@@ -10,13 +10,13 @@ import androidx.recyclerview.widget.RecyclerView.NO_POSITION
  */
 internal class SpanAnimationInfo(private val source: SpanAnimationValues) {
     /**
-     * [values]中最小的layoutPosition
+     * [values]中最小layoutPosition
      */
     var minLayoutPosition = Int.MAX_VALUE
         private set
 
     /**
-     * [values]中最大的layoutPosition
+     * [values]中最大layoutPosition
      */
     var maxLayoutPosition = Int.MIN_VALUE
         private set
@@ -24,8 +24,8 @@ internal class SpanAnimationInfo(private val source: SpanAnimationValues) {
     /**
      * [SpanAnimationDrawable]的动画值集合
      *
-     * 集合元素顺序是从[minLayoutPosition]到[maxLayoutPosition]，
-     * 确保绘制顺序是从[minLayoutPosition]到[maxLayoutPosition]。
+     * 集合元素顺序从[minLayoutPosition]到[maxLayoutPosition]，
+     * 确保绘制顺序从[minLayoutPosition]到[maxLayoutPosition]。
      */
     val values: List<SpanAnimationValue>
 
@@ -51,7 +51,7 @@ internal class SpanAnimationInfo(private val source: SpanAnimationValues) {
         }
     }
 
-    fun release() {
-        source.release()
+    fun clear() {
+        source.clear()
     }
 }

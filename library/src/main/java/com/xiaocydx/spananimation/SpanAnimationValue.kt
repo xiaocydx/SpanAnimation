@@ -9,7 +9,7 @@ import android.view.View
  * @author xcc
  * @date 2022/12/16
  */
-internal class SpanAnimationValue constructor(
+internal class SpanAnimationValue(
     val left: Int,
     val top: Int,
     val right: Int,
@@ -20,17 +20,21 @@ internal class SpanAnimationValue constructor(
     val child: View?,
     val bitmap: Bitmap?,
     val viewType: Int,
+    val canRecycle: Boolean,
     val layoutPosition: Int
 ) {
     val width = right - left
     val height = bottom - top
 
     /**
-     * 是否为计算出的值
+     * 是否为计算值
      *
-     * 若[child]和[bitmap]为null，则表示[left]、[top]、[right]、[bottom]是计算出的值，
-     * 而不是捕获出的值，跟当前值对称的[SpanAnimationValue]，其`child`和`bitmap`不为`null`。
+     * 若[child]和[bitmap]为null，则表示[left]、[top]、[right]、[bottom]是计算值，
+     * 而不是捕获值，跟当前值对称的[SpanAnimationValue]，其`child`和`bitmap`不为`null`。
      */
-    val isCalculatedValue: Boolean
-        get() = child == null && bitmap == null
+    val isCalculated = child == null && bitmap == null
+
+    fun recycle() {
+        if (canRecycle) bitmap?.recycle()
+    }
 }

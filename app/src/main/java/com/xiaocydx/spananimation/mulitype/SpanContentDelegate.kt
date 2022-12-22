@@ -29,26 +29,26 @@ class SpanContentDelegate(
     override fun getSpanSize(position: Int, spanCount: Int): Int = 1
 
     override fun onCreateViewHolder(parent: ViewGroup): SpanContentHolder {
-        return SpanContentHolder(SpanContentLayout(parent.context))
+        return SpanContentHolder(SpanContentItemView(parent.context))
     }
 
     override fun onBindViewHolder(
         holder: SpanContentHolder,
         item: AnimationItem.Content
     ): Unit = with(holder.view) {
-        // requestManager.load(item.url).centerCrop()
-        //     .placeholder(R.color.placeholder_color)
-        //     .into(imageView)
-        imageView.setBackgroundColor(
-            if (item.num % 2 != 0) 0xFF72AAA2.toInt() else 0xFFAA766B.toInt()
-        )
-        textView.text = holder.layoutPosition.toString()
+        requestManager.load(item.url).centerCrop()
+            .placeholder(R.color.placeholder_color)
+            .into(imageView)
+        // imageView.setBackgroundColor(
+        //     if (item.num % 2 != 0) 0xFF72AAA2.toInt() else 0xFFAA766B.toInt()
+        // )
+        // textView.text = holder.layoutPosition.toString()
     }
 }
 
-class SpanContentHolder(val view: SpanContentLayout) : ViewHolder(view)
+class SpanContentHolder(val view: SpanContentItemView) : ViewHolder(view)
 
-class SpanContentLayout(context: Context) : CustomLayout(context) {
+class SpanContentItemView(context: Context) : CustomLayout(context) {
     val imageView = AppCompatImageView(context).apply {
         addView(this, matchParent, wrapContent)
     }
@@ -62,9 +62,10 @@ class SpanContentLayout(context: Context) : CustomLayout(context) {
 
     override fun onMeasureChildren(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val size = measuredWidth
-        imageView.measureWith(size.toExactlyMeasureSpec(), size.toExactlyMeasureSpec())
-        textView.measureWith(size.toExactlyMeasureSpec(), size.toExactlyMeasureSpec())
-        setMeasuredDimension(measuredWidth, measuredWidth)
+        val measureSpec = size.toExactlyMeasureSpec()
+        imageView.measureWith(measureSpec, measureSpec)
+        textView.measureWith(measureSpec, measureSpec)
+        setMeasuredDimension(size, size)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
