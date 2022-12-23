@@ -87,7 +87,7 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     }
 
     /**
-     * 从当前`spanCount`过渡到[spanCount]
+     * 从当前spanCount过渡到[spanCount]
      */
     fun go(spanCount: Int) {
         val lm = layoutManager ?: return
