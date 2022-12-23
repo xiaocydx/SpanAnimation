@@ -23,7 +23,7 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     private val drawable = rv.spanAnimationDrawable
     private val layoutManager: GridLayoutManager?
         get() = rv.layoutManager as? GridLayoutManager
-    internal var capturedResultProvider: (ViewHolder.() -> CapturedResult) = defaultCapturedResultProvider
+    internal var provider: (ViewHolder.() -> CapturedResult) = defaultProvider
         private set
 
     /**
@@ -33,10 +33,10 @@ class SpanAnimationController(internal val rv: RecyclerView) {
         get() = drawable.isRunning
 
     /**
-     * 设置捕获结果提供者，默认使用[defaultCapturedResultProvider]
+     * 设置捕获结果提供者，默认使用[defaultProvider]
      */
     fun setCapturedResultProvider(provider: ViewHolder.() -> CapturedResult) {
-        this.capturedResultProvider = provider
+        this.provider = provider
     }
 
     /**
@@ -91,7 +91,8 @@ class SpanAnimationController(internal val rv: RecyclerView) {
      */
     fun go(spanCount: Int) {
         val lm = layoutManager ?: return
-        SpanAnimationRunner(start = true, spanCount, rv, lm, capturedResultProvider).begin()
+        if (lm.spanCount == spanCount || spanCount < 1) return
+        SpanAnimationRunner(spanCount, rv, lm, provider).start()
     }
 
     fun increase() {
@@ -103,6 +104,7 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     }
 
     internal fun getSpanCount(spanCount: Int, sign: Int): Int {
+        require(sign == 1 || sign == -1)
         var index = spanCounts.indexOf(spanCount)
         if (index == -1) return (spanCount + sign)
         index += sign
@@ -110,7 +112,7 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     }
 
     private companion object {
-        val defaultCapturedResultProvider: ViewHolder.() -> CapturedResult = {
+        val defaultProvider: ViewHolder.() -> CapturedResult = {
             CapturedResult(this.itemView.drawToBitmap(), canRecycle = true)
         }
     }

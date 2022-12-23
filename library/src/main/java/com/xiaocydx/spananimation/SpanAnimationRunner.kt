@@ -7,6 +7,7 @@ import androidx.core.view.doOnPreDraw
 import androidx.core.view.forEach
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.VERTICAL
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 
 /**
@@ -16,12 +17,19 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
  * @date 2022/12/16
  */
 internal class SpanAnimationRunner(
-    private val start: Boolean,
     private val spanCount: Int,
     private val rv: RecyclerView,
-    private val layoutManager: GridLayoutManager,
-    private val capturedResultProvider: ViewHolder.() -> CapturedResult
+    private val lm: GridLayoutManager,
+    private val provider: ViewHolder.() -> CapturedResult
 ) {
+
+    fun start() {
+        begin(start = true)
+    }
+
+    fun capture() {
+        begin(start = false)
+    }
 
     /**
      * 1. 捕获设置spanCount前的startValues
@@ -30,14 +38,14 @@ internal class SpanAnimationRunner(
      * 4. 匹配startValues和endValues，补齐缺少的值
      * 5. 设置startValues和endValues，若[start]为ture，则开始动画
      */
-    fun begin() {
-        if (spanCount < 1) return
-        if (rv.childCount == 0) {
+    private fun begin(start: Boolean) {
+        if (lm.spanCount == spanCount || spanCount < 1) return
+        if (lm.itemCount == 0) {
             requestSpanCount(spanCount)
             return
         }
         ensureSupportSpanAnimation()
-        val startSpanCount = layoutManager.spanCount
+        val startSpanCount = lm.spanCount
         val startValues = rv.captureStartValues()
 
         requestSpanCount(spanCount)
@@ -51,7 +59,7 @@ internal class SpanAnimationRunner(
         // 确保当有图片缓存时，能捕获到有内容的endValues。
         rv.doOnNextLayout {
             rv.doOnPreDraw {
-                val endSpanCount = layoutManager.spanCount
+                val endSpanCount = lm.spanCount
                 val endValues = rv.captureEndValues(startValues)
 
                 if (!matchAnimationValues(startSpanCount, endSpanCount, startValues, endValues)) {
@@ -68,12 +76,12 @@ internal class SpanAnimationRunner(
     }
 
     private fun ensureSupportSpanAnimation() {
-        require(!layoutManager.reverseLayout) { "暂时不支持反转布局" }
-        require(layoutManager.orientation == RecyclerView.VERTICAL) { "暂时不支持水平方向布局" }
+        require(!lm.reverseLayout) { "暂时不支持反转布局" }
+        require(lm.orientation == VERTICAL) { "暂时不支持水平方向布局" }
     }
 
     private fun requestSpanCount(spanCount: Int) {
-        layoutManager.spanCount = spanCount
+        lm.spanCount = spanCount
         rv.invalidateItemDecorations()
     }
 
@@ -82,7 +90,7 @@ internal class SpanAnimationRunner(
         forEach { child ->
             val holder = getChildViewHolder(child) ?: return@forEach
             val layoutPosition = holder.layoutPosition
-            val (bitmap, canRecycle) = capturedResultProvider(holder)
+            val (bitmap, canRecycle) = provider(holder)
             values[layoutPosition] = createAnimationValue(child, bitmap, canRecycle, layoutPosition)
         }
         return values
@@ -97,7 +105,7 @@ internal class SpanAnimationRunner(
             var bitmap = startValue?.bitmap
             var canRecycle = startValue?.canRecycle ?: true
             if (bitmap == null) {
-                val result = capturedResultProvider(holder)
+                val result = provider(holder)
                 bitmap = result.bitmap
                 canRecycle = result.canRecycle
             }
@@ -113,12 +121,12 @@ internal class SpanAnimationRunner(
         layoutPosition: Int
     ): SpanAnimationValue {
         val params = child.layoutParams as GridLayoutManager.LayoutParams
-        val spanSizeLookup = layoutManager.spanSizeLookup
+        val spanSizeLookup = lm.spanSizeLookup
         if (!spanSizeLookup.isSpanGroupIndexCacheEnabled) {
             spanSizeLookup.isSpanGroupIndexCacheEnabled = true
         }
-        val spanGroupIndex = layoutManager.spanSizeLookup
-            .getSpanGroupIndex(layoutPosition, layoutManager.spanCount)
+        val spanGroupIndex = lm.spanSizeLookup
+            .getSpanGroupIndex(layoutPosition, lm.spanCount)
         val viewType = rv.getChildViewHolder(child).itemViewType
         return SpanAnimationValue(
             child.left, child.top, child.right, child.bottom,
