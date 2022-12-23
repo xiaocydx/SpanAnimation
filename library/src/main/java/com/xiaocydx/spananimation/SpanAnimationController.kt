@@ -35,15 +35,15 @@ class SpanAnimationController(internal val rv: RecyclerView) {
     /**
      * 设置捕获结果提供者，默认使用[defaultProvider]
      */
-    fun setCapturedResultProvider(provider: ViewHolder.() -> CapturedResult) {
+    fun setCapturedProvider(provider: ViewHolder.() -> CapturedResult) {
         this.provider = provider
     }
 
     /**
-     * 设置绘制中Bitmap提供者，用于替换绘制中已有的捕获结果
+     * 设置绘制中Bitmap提供者，用于替换已有的捕获结果
      */
-    fun setDrawingBitmapProvider(drawingBitmap: ViewHolder.() -> Bitmap?) {
-        drawable.drawingBitmapProvider = { drawingBitmap(rv.getChildViewHolder(it)) }
+    fun setDrawingProvider(provider: ViewHolder.() -> Bitmap?) {
+        drawable.drawingProvider = { provider(rv.getChildViewHolder(it)) }
     }
 
     /**
@@ -128,7 +128,7 @@ data class CapturedResult(val bitmap: Bitmap, val canRecycle: Boolean)
  * 2. 图片加载完成的Bitmap替换无内容的捕获结果。
  */
 inline fun SpanAnimationController.setImageViewProvider(crossinline provider: ViewHolder.() -> ImageView?) {
-    setCapturedResultProvider {
+    setCapturedProvider {
         val imageView = provider(this)
         var bitmap = (imageView?.drawable as? BitmapDrawable)?.bitmap
         var canRecycle = bitmap == null
@@ -138,5 +138,5 @@ inline fun SpanAnimationController.setImageViewProvider(crossinline provider: Vi
         }
         CapturedResult(bitmap, canRecycle)
     }
-    setDrawingBitmapProvider { (provider(this)?.drawable as? BitmapDrawable)?.bitmap }
+    setDrawingProvider { (provider(this)?.drawable as? BitmapDrawable)?.bitmap }
 }

@@ -39,7 +39,7 @@ internal class SpanAnimationDrawable : Drawable() {
     var animationDuration = 500L
     var animationInterpolator: Interpolator = AccelerateDecelerateInterpolator()
     var completeInterpolator: Interpolator = DecelerateInterpolator()
-    var drawingBitmapProvider: ((child: View) -> Bitmap?)? = null
+    var drawingProvider: ((child: View) -> Bitmap?)? = null
 
     fun begin(startInfo: SpanAnimationInfo, endInto: SpanAnimationInfo, start: Boolean) {
         if (isRunning) animator.end()
@@ -107,8 +107,8 @@ internal class SpanAnimationDrawable : Drawable() {
             val end = endValues[index]
             var bitmap = (start.bitmap ?: end.bitmap) ?: continue
             val child = start.child ?: end.child
-            if (child != null && drawingBitmapProvider != null) {
-                bitmap = drawingBitmapProvider!!.invoke(child) ?: bitmap
+            if (child != null && drawingProvider != null) {
+                bitmap = drawingProvider!!.invoke(child) ?: bitmap
             }
             if (bitmap.isRecycled) continue
 
