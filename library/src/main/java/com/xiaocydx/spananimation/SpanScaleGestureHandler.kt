@@ -57,7 +57,7 @@ internal class SpanScaleGestureHandler(
                 if (spanCount != lm.spanCount && spanCount >= 1) {
                     minToMax = spanCount > lm.spanCount
                     scale = if (minToMax) MIN_SCALE else MAX_SCALE
-                    SpanAnimationRunner(spanCount, rv, lm, controller.provider).capture()
+                    controller.capture(spanCount)
                 }
                 captured = true
             }

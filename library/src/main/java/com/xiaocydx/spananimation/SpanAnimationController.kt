@@ -20,11 +20,10 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
 class SpanAnimationController(internal val rv: RecyclerView) {
     private var spanCounts = emptyList<Int>()
     private var handler: SpanScaleGestureHandler? = null
+    private var provider: (ViewHolder.() -> CapturedResult) = defaultProvider
     private val drawable = rv.spanAnimationDrawable
     private val layoutManager: GridLayoutManager?
         get() = rv.layoutManager as? GridLayoutManager
-    internal var provider: (ViewHolder.() -> CapturedResult) = defaultProvider
-        private set
 
     /**
      * 动画是否运行中
@@ -109,6 +108,12 @@ class SpanAnimationController(internal val rv: RecyclerView) {
         if (index == -1) return (spanCount + sign)
         index += sign
         return spanCounts.getOrNull(index) ?: spanCount
+    }
+
+    internal fun capture(spanCount: Int) {
+        val lm = layoutManager ?: return
+        if (lm.spanCount == spanCount || spanCount < 1) return
+        SpanAnimationRunner(spanCount, rv, lm, provider).capture()
     }
 
     private companion object {
