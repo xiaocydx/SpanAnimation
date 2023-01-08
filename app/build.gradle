@@ -40,7 +40,7 @@ dependencies {
     implementation 'com.github.xiaocydx:CXRV:1.2.2'
     implementation 'androidx.recyclerview:recyclerview:1.2.0'
     implementation 'com.github.bumptech.glide:glide:4.14.2'
-    implementation project(path: ':library')
+    implementation project(path: ':SpanAnimation')
     annotationProcessor 'com.github.bumptech.glide:compiler:4.14.2'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'

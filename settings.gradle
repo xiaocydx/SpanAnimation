@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SpanAnimation"
 include ':app'
-include ':library'
+include ':SpanAnimation'
