@@ -16,14 +16,16 @@ import com.xiaocydx.sample.onClick
 import com.xiaocydx.spananimation.mulitype.*
 
 /**
+ * [SpanAnimationController]的示例代码
+ *
  * @author xcc
  * @date 2022/12/18
  */
-class MainActivity : AppCompatActivity() {
+class SpanAnimationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_span_animation)
         val rvAnimation = findViewById<RecyclerView>(R.id.rvAnimation)
         val btnIncrease = findViewById<Button>(R.id.btnIncrease)
         val btnDecrease = findViewById<Button>(R.id.btnDecrease)
@@ -48,7 +50,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createAnimationAdapter() = listAdapter<AnimationItem> {
-        val requestManager = Glide.with(this@MainActivity)
+        val requestManager = Glide.with(this@SpanAnimationActivity)
         register(SpanCategoryDelegate())
         register(SpanContentDelegate(requestManager))
 
