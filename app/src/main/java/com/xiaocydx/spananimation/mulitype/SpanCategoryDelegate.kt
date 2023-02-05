@@ -16,10 +16,11 @@ import com.xiaocydx.sample.withLayoutParams
  * @author xcc
  * @date 2022/12/17
  */
-class SpanCategoryDelegate : ViewTypeDelegate<AnimationItem.Category, ViewHolder>() {
+class SpanCategoryDelegate : ViewTypeDelegate<SpanItem.Category, ViewHolder>() {
+
     override fun areItemsTheSame(
-        oldItem: AnimationItem.Category,
-        newItem: AnimationItem.Category
+        oldItem: SpanItem.Category,
+        newItem: SpanItem.Category
     ): Boolean = oldItem.id == newItem.id
 
     override fun getSpanSize(position: Int, spanCount: Int): Int = spanCount
@@ -34,7 +35,7 @@ class SpanCategoryDelegate : ViewTypeDelegate<AnimationItem.Category, ViewHolder
         return object : ViewHolder(view) {}
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, item: AnimationItem.Category) {
+    override fun onBindViewHolder(holder: ViewHolder, item: SpanItem.Category) {
         (holder.itemView as TextView).text = item.text
     }
 }

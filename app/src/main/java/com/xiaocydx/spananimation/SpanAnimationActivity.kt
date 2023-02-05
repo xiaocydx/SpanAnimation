@@ -1,11 +1,14 @@
 package com.xiaocydx.spananimation
 
+import android.app.SharedElementCallback
 import android.os.Bundle
-import android.widget.Button
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.xiaocydx.cxrv.divider.spacing
+import com.xiaocydx.cxrv.itemclick.doOnItemClick
+import com.xiaocydx.cxrv.list.ListAdapter
 import com.xiaocydx.cxrv.list.adapter
 import com.xiaocydx.cxrv.list.grid
 import com.xiaocydx.cxrv.list.submitList
@@ -13,7 +16,10 @@ import com.xiaocydx.cxrv.multitype.listAdapter
 import com.xiaocydx.cxrv.multitype.register
 import com.xiaocydx.sample.dp
 import com.xiaocydx.sample.onClick
+import com.xiaocydx.spananimation.databinding.ActivitySpanAnimationBinding
 import com.xiaocydx.spananimation.mulitype.*
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 /**
  * [SpanAnimationController]的示例代码
@@ -25,47 +31,85 @@ class SpanAnimationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_span_animation)
-        val rvAnimation = findViewById<RecyclerView>(R.id.rvAnimation)
-        val btnIncrease = findViewById<Button>(R.id.btnIncrease)
-        val btnDecrease = findViewById<Button>(R.id.btnDecrease)
+        val binding = ActivitySpanAnimationBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        rvAnimation
+        binding.rvAnimation
             .grid(spanCount = 3)
             .spacing(width = 3.dp, height = 3.dp)
-            .adapter(createAnimationAdapter())
+            .adapter(createListAdapter()
+                .also(::submitSpanList)
+                .also(::setExitSharedElementCallback)
+            )
 
-        val controller = SpanAnimationController(rvAnimation).apply {
+        val controller = SpanAnimationController(binding.rvAnimation).apply {
             // setSpanCounts(2, 3, 4, 8)
             setScaleGestureEnabled(true)
             setImageViewProvider { (this as? SpanContentHolder)?.view?.imageView }
         }
 
-        btnIncrease.onClick {
-            if (!controller.isRunning) controller.increase()
-        }
-        btnDecrease.onClick {
-            if (!controller.isRunning) controller.decrease()
-        }
+        binding.btnIncrease.onClick { controller.takeIf { !it.isRunning }?.increase() }
+        binding.btnDecrease.onClick { controller.takeIf { !it.isRunning }?.decrease() }
     }
 
-    private fun createAnimationAdapter() = listAdapter<AnimationItem> {
-        val requestManager = Glide.with(this@SpanAnimationActivity)
+    private fun createListAdapter() = listAdapter<SpanItem> {
+        val activity = this@SpanAnimationActivity
         register(SpanCategoryDelegate())
-        register(SpanContentDelegate(requestManager))
+        register(SpanContentDelegate(Glide.with(activity)).apply {
+            setMaxScrap(20)
+            doOnItemClick { holder, item ->
+                ContentPreviewHelper.start(
+                    activity = activity,
+                    imageView = holder.view.imageView,
+                    current = item,
+                    content = adapter.currentList.filterIsInstance<SpanItem.Content>()
+                )
+            }
+        })
+    }
 
-        val list = mutableListOf<AnimationItem>()
+    private fun submitSpanList(adapter: ListAdapter<SpanItem, *>) {
+        val list = mutableListOf<SpanItem>()
         val categoryCount = 10
         val contentCount = 20
         (1..categoryCount).map {
-            AnimationItem.Category("目录-$it", "目录-$it")
+            SpanItem.Category("目录-$it", "目录-$it")
         }.forEach { category ->
             list.add(category)
             (1..contentCount).map { num ->
                 val id = "${category.id}-$num"
-                AnimationItem.Content(id, urls[num % urls.size], num)
+                SpanItem.Content(id, urls[num % urls.size], num)
             }.let(list::addAll)
         }
-        listAdapter.submitList(list)
+        adapter.submitList(list)
+    }
+
+    private fun setExitSharedElementCallback(adapter: ListAdapter<SpanItem, *>) {
+        var pendingPosition = -1
+        ContentPreviewHelper.contentIdEvent
+            .onEach { contentId ->
+                pendingPosition = adapter.currentList.indexOfFirst {
+                    it is SpanItem.Content && it.id == contentId
+                }
+                adapter.recyclerView?.scrollToPosition(pendingPosition)
+            }
+            .launchIn(lifecycleScope)
+
+        setExitSharedElementCallback(object : SharedElementCallback() {
+            override fun onMapSharedElements(
+                names: MutableList<String>,
+                sharedElements: MutableMap<String, View>
+            ) {
+                adapter.recyclerView?.takeIf { pendingPosition != -1 }
+                    ?.findViewHolderForAdapterPosition(pendingPosition)
+                    ?.let { it as? SpanContentHolder }
+                    ?.let { holder ->
+                        val name = names.first()
+                        val view = holder.view.imageView
+                        sharedElements[name] = view
+                    }
+                pendingPosition = -1
+            }
+        })
     }
 }
