@@ -1,12 +1,14 @@
 package com.xiaocydx.spananimation.mulitype
 
+import java.io.Serializable
+
 /**
  * @author xcc
  * @date 2022/12/17
  */
-sealed class AnimationItem {
-    class Category(val id: String, val text: String) : AnimationItem()
-    class Content(val id: String, val url: String, val num: Int) : AnimationItem()
+sealed class SpanItem : Serializable {
+    data class Category(val id: String, val text: String) : SpanItem()
+    data class Content(val id: String, val url: String, val num: Int) : SpanItem()
 }
 
 val urls = arrayOf(

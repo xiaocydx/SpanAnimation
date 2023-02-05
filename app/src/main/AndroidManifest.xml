@@ -27,6 +27,9 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <activity
+            android:name=".ContentPreviewActivity"
+            android:theme="@style/ContentPreview"/>
     </application>
 
 </manifest>

@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
@@ -20,10 +21,11 @@ import com.xiaocydx.spananimation.custom.CustomLayout
  */
 class SpanContentDelegate(
     private val requestManager: RequestManager
-) : ViewTypeDelegate<AnimationItem.Content, SpanContentHolder>() {
+) : ViewTypeDelegate<SpanItem.Content, SpanContentHolder>() {
+
     override fun areItemsTheSame(
-        oldItem: AnimationItem.Content,
-        newItem: AnimationItem.Content
+        oldItem: SpanItem.Content,
+        newItem: SpanItem.Content
     ): Boolean = oldItem.id == newItem.id
 
     override fun getSpanSize(position: Int, spanCount: Int): Int = 1
@@ -34,15 +36,12 @@ class SpanContentDelegate(
 
     override fun onBindViewHolder(
         holder: SpanContentHolder,
-        item: AnimationItem.Content
+        item: SpanItem.Content
     ): Unit = with(holder.view) {
-        requestManager.load(item.url).centerCrop()
+        imageView.transitionName = item.id
+        requestManager.load(item.url)
             .placeholder(R.color.placeholder_color)
             .into(imageView)
-        // imageView.setBackgroundColor(
-        //     if (item.num % 2 != 0) 0xFF72AAA2.toInt() else 0xFFAA766B.toInt()
-        // )
-        // textView.text = holder.layoutPosition.toString()
     }
 }
 
@@ -50,7 +49,8 @@ class SpanContentHolder(val view: SpanContentItemView) : ViewHolder(view)
 
 class SpanContentItemView(context: Context) : CustomLayout(context) {
     val imageView = AppCompatImageView(context).apply {
-        addView(this, matchParent, wrapContent)
+        scaleType = ImageView.ScaleType.CENTER_CROP
+        addView(this, matchParent, 0.dp)
     }
 
     val textView = AppCompatTextView(context).apply {
