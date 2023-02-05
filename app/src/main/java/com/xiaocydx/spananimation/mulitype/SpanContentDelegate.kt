@@ -42,6 +42,10 @@ class SpanContentDelegate(
         requestManager.load(item.url)
             .placeholder(R.color.placeholder_color)
             .into(imageView)
+        // imageView.setBackgroundColor(
+        //     if (item.num % 2 != 0) 0xFF72AAA2.toInt() else 0xFFAA766B.toInt()
+        // )
+        // textView.text = holder.layoutPosition.toString()
     }
 }
 
