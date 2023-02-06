@@ -23,16 +23,17 @@ internal val RecyclerView.spanAnimationDrawable: SpanAnimationDrawable
     }
 
 internal class SpanAnimationDrawable : Drawable() {
+    private val dstRectF = RectF()
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var startInfo: SpanAnimationInfo? = null
     private var endInto: SpanAnimationInfo? = null
     private var allowClear = true
-    private var progress = -1f
-    private val dstRectF = RectF()
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val animator = createAnimator()
+    private var animator: ValueAnimator? = null
 
+    var fraction = -1f
+        private set
     val isRunning: Boolean
-        get() = animator.isRunning
+        get() = animator?.isRunning == true
     val isInitialized: Boolean
         get() = startInfo != null && endInto != null
 
@@ -42,61 +43,69 @@ internal class SpanAnimationDrawable : Drawable() {
     var drawingProvider: ((child: View) -> Bitmap?)? = null
 
     fun begin(startInfo: SpanAnimationInfo, endInto: SpanAnimationInfo, start: Boolean) {
-        if (isRunning) animator.end()
+        endAnimation(allowClear = true)
         this.startInfo = startInfo
         this.endInto = endInto
         setChildVisible(isVisible = false)
         if (!start) return
-        animator.apply {
+        runAnimation {
             duration = animationDuration
             interpolator = animationInterpolator
             setFloatValues(0f, 1f)
-            start()
         }
     }
 
-    fun setProgress(progress: Float) {
-        if (isRunning) {
-            allowClear = false
-            animator.end()
-            allowClear = true
-        }
-        val safeProgress = progress
+    fun setFraction(fraction: Float) {
+        endAnimation(allowClear = false)
+        val safeFraction = fraction
             .coerceAtLeast(0f)
             .coerceAtMost(1f)
         when {
-            this.progress == safeProgress -> return
-            safeProgress == 1f -> {
+            this.fraction == safeFraction -> return
+            safeFraction == 1f -> {
                 setChildVisible(isVisible = true)
                 clear()
             }
             else -> {
-                this.progress = safeProgress
+                this.fraction = safeFraction
                 invalidateSelf()
             }
         }
     }
 
-    fun complete() {
+    fun completeToStart(action: (() -> Unit)? = null) {
+        complete(toEnd = false, action)
+    }
+
+    fun completeToEnd(action: (() -> Unit)? = null) {
+        complete(toEnd = true, action)
+    }
+
+    private fun complete(toEnd: Boolean, action: (() -> Unit)? = null) {
         if (!isInitialized) return
-        val startProgress = progress
-        if (isRunning) {
-            allowClear = false
-            animator.end()
-            allowClear = true
-        }
-        animator.apply {
-            duration = (animationDuration * (1f - startProgress)).toLong()
+        val startFraction = fraction
+        endAnimation(allowClear = false)
+        runAnimation {
             interpolator = completeInterpolator
-            setFloatValues(startProgress, 1f)
-            start()
+            duration = if (toEnd) {
+                (animationDuration * (1f - startFraction)).toLong()
+            } else {
+                (animationDuration * startFraction).toLong()
+            }
+            if (action != null) {
+                addListener(
+                    onCancel = { action() },
+                    onEnd = { action() }
+                )
+            }
+            setFloatValues(startFraction, if (toEnd) 1f else 0f)
         }
     }
 
     override fun draw(canvas: Canvas) {
         val startValues = startInfo?.values ?: return
         val endValues = endInto?.values ?: return
-        val progress = progress
+        val fraction = fraction
             .coerceAtLeast(0f)
             .coerceAtMost(1f)
 
@@ -112,10 +121,10 @@ internal class SpanAnimationDrawable : Drawable() {
             }
             if (bitmap.isRecycled) continue
 
-            val left = start.left + (end.left - start.left) * progress
-            val top = start.top + (end.top - start.top) * progress
-            val width = start.width + (end.width - start.width) * progress
-            val height = start.height + (end.height - start.height) * progress
+            val left = start.left + (end.left - start.left) * fraction
+            val top = start.top + (end.top - start.top) * fraction
+            val width = start.width + (end.width - start.width) * fraction
+            val height = start.height + (end.height - start.height) * fraction
             val right = left + width
             val bottom = top + height
             if (left > boundsWidth || top > boundsHeight || right < 0 || bottom < 0) {
@@ -127,16 +136,28 @@ internal class SpanAnimationDrawable : Drawable() {
         }
     }
 
-    private fun createAnimator() = ValueAnimator.ofFloat(0f, 1f).apply {
-        addUpdateListener {
-            progress = it.animatedValue as Float
-            invalidateSelf()
+    private inline fun runAnimation(block: ValueAnimator.() -> Unit) {
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            addUpdateListener {
+                fraction = it.animatedValue as Float
+                invalidateSelf()
+            }
+            addListener(
+                onStart = { setChildVisible(false) },
+                onCancel = { setChildVisible(true).clear() },
+                onEnd = { setChildVisible(true).clear() }
+            )
+            block(this)
         }
-        addListener(
-            onStart = { setChildVisible(false) },
-            onCancel = { setChildVisible(true).clear() },
-            onEnd = { setChildVisible(true).clear() }
-        )
+        animator!!.start()
+    }
+
+    private fun endAnimation(allowClear: Boolean) {
+        if (!isRunning) return
+        this.allowClear = allowClear
+        animator?.end()
+        animator = null
+        this.allowClear = true
     }
 
     private fun setChildVisible(isVisible: Boolean) = apply {
@@ -155,8 +176,9 @@ internal class SpanAnimationDrawable : Drawable() {
         endInto?.clear()
         startInfo = null
         endInto = null
-        progress = -1f
+        fraction = -1f
         dstRectF.setEmpty()
+        animator = null
     }
 
     override fun setAlpha(alpha: Int) = Unit

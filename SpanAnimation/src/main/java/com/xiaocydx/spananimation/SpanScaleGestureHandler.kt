@@ -1,5 +1,6 @@
 package com.xiaocydx.spananimation
 
+import android.os.Parcelable
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.recyclerview.widget.GridLayoutManager
@@ -27,8 +28,7 @@ internal class SpanScaleGestureHandler(
         detector.onTouchEvent(e)
         if (e.action == MotionEvent.ACTION_CANCEL
                 || e.action == MotionEvent.ACTION_UP) {
-            listener.reset()
-            drawable.complete()
+            listener.complete()
         }
     }
 
@@ -38,11 +38,29 @@ internal class SpanScaleGestureHandler(
         private var scale = MIN_SCALE
         private var captured = false
         private var minToMax = false
+        private var restoreState: Parcelable? = null
+        private var restoreSpanCount = -1
 
-        fun reset() {
+        fun complete() {
+            val lm = rv.layoutManager as? GridLayoutManager
+            if (lm != null && drawable.fraction in 0f..0.2f
+                    && restoreState != null && restoreSpanCount != -1) {
+                val state = restoreState
+                val spanCount = restoreSpanCount
+                drawable.completeToStart {
+                    // FIXME: 无图片缓存时，会短暂显示占位图
+                    lm.onRestoreInstanceState(state)
+                    lm.spanCount = spanCount
+                    rv.invalidateItemDecorations()
+                }
+            } else {
+                drawable.completeToEnd()
+            }
             scale = MIN_SCALE
             captured = false
             minToMax = false
+            restoreState = null
+            restoreSpanCount = -1
         }
 
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
@@ -57,6 +75,8 @@ internal class SpanScaleGestureHandler(
                 if (spanCount != lm.spanCount && spanCount >= 1) {
                     minToMax = detector.scaleFactor > 1f
                     scale = if (minToMax) MIN_SCALE else MAX_SCALE
+                    restoreState = lm.onSaveInstanceState()
+                    restoreSpanCount = lm.spanCount
                     controller.capture(spanCount)
                 }
                 captured = true
@@ -69,7 +89,7 @@ internal class SpanScaleGestureHandler(
                 } else {
                     (MAX_SCALE - scale) / (MAX_SCALE - MIN_SCALE)
                 }
-                drawable.setProgress(progress)
+                drawable.setFraction(progress)
             }
             return true
         }
