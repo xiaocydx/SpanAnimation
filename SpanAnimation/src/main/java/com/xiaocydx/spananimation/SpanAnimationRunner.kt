@@ -91,7 +91,9 @@ internal class SpanAnimationRunner(
             val holder = getChildViewHolder(child) ?: return@forEach
             val layoutPosition = holder.layoutPosition
             val (bitmap, canRecycle) = provider(holder)
-            values[layoutPosition] = createAnimationValue(child, bitmap, canRecycle, layoutPosition)
+            values[layoutPosition] = createAnimationValue(
+                child, bitmap, canRecycle, layoutPosition
+            )
         }
         return values
     }
@@ -109,14 +111,16 @@ internal class SpanAnimationRunner(
                 bitmap = result.bitmap
                 canRecycle = result.canRecycle
             }
-            values[layoutPosition] = createAnimationValue(child, bitmap, canRecycle, layoutPosition)
+            values[layoutPosition] = createAnimationValue(
+                child, bitmap, canRecycle, layoutPosition
+            ).apply { attachChild(child) }
         }
         return values
     }
 
     private fun createAnimationValue(
         child: View,
-        bitmap: Bitmap?,
+        bitmap: Bitmap,
         canRecycle: Boolean,
         layoutPosition: Int
     ): SpanAnimationValue {
@@ -131,7 +135,7 @@ internal class SpanAnimationRunner(
         return SpanAnimationValue(
             child.left, child.top, child.right, child.bottom,
             params.spanSize, params.spanIndex, spanGroupIndex,
-            child, bitmap, viewType, canRecycle, layoutPosition,
+            bitmap, viewType, canRecycle, layoutPosition,
         )
     }
 

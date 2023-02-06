@@ -17,7 +17,6 @@ internal class SpanAnimationValue(
     val spanSize: Int,
     val spanIndex: Int,
     val spanGroupIndex: Int,
-    val child: View?,
     val bitmap: Bitmap?,
     val viewType: Int,
     val canRecycle: Boolean,
@@ -27,12 +26,24 @@ internal class SpanAnimationValue(
     val height = bottom - top
 
     /**
+     * 起始值或者计算值该属性为`null`
+     */
+    var child: View? = null
+        private set
+
+    /**
      * 是否为计算值
      *
-     * 若[child]和[bitmap]为null，则表示[left]、[top]、[right]、[bottom]是计算值，
-     * 而不是捕获值，跟当前值对称的[SpanAnimationValue]，其`child`和`bitmap`不为`null`。
+     * 若[bitmap]为null，则表示[left]、[top]、[right]、[bottom]是计算值，
+     * 而不是捕获值，跟当前值对称的[SpanAnimationValue]，其`bitmap`不为`null`。
      */
-    val isCalculated = child == null && bitmap == null
+    val isCalculated = bitmap == null
+
+    fun attachChild(child: View) {
+        require(!isCalculated) { "计算值child为null" }
+        require(this.child == null) { "child只能被赋值一次" }
+        this.child = child
+    }
 
     fun recycle() {
         if (canRecycle) bitmap?.recycle()

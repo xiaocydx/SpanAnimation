@@ -2,7 +2,6 @@ package com.xiaocydx.spananimation
 
 import android.graphics.Bitmap
 import android.util.SparseArray
-import android.view.View
 import androidx.core.util.forEach
 import androidx.core.util.isNotEmpty
 
@@ -85,7 +84,6 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         var bottom: Int
         var spanIndex: Int
         var spanGroupIndex: Int
-        val child: View? = null
         val bitmap: Bitmap? = null
         val canRecycle = false
 
@@ -121,7 +119,7 @@ internal class SpanAnimationValues(initialCapacity: Int) {
 
             set(layoutPosition, SpanAnimationValue(
                 left, top, right, bottom,
-                spanSize, spanIndex, spanGroupIndex, child,
+                spanSize, spanIndex, spanGroupIndex,
                 bitmap, viewType, canRecycle, layoutPosition))
         }
 
@@ -158,7 +156,7 @@ internal class SpanAnimationValues(initialCapacity: Int) {
 
             set(layoutPosition, SpanAnimationValue(
                 left, top, right, bottom,
-                spanSize, spanIndex, spanGroupIndex, child,
+                spanSize, spanIndex, spanGroupIndex,
                 bitmap, viewType, canRecycle, layoutPosition))
         }
 
@@ -197,7 +195,7 @@ internal class SpanAnimationValues(initialCapacity: Int) {
         if (!checkMinMaxLayoutPositions() || checkChildDimensions()) return
         for (layoutPosition in minLayoutPosition..maxLayoutPosition) {
             val startValue = get(layoutPosition)
-            if (startValue?.child == null || startValue.isCalculated) continue
+            if (startValue == null || startValue.isCalculated) continue
             putChildDimensions(startValue.viewType, startValue.width, startValue.height)
         }
     }
