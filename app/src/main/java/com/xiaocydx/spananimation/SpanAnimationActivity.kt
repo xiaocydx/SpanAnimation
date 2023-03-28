@@ -39,8 +39,7 @@ class SpanAnimationActivity : AppCompatActivity() {
             .spacing(width = 3.dp, height = 3.dp)
             .adapter(createListAdapter()
                 .also(::submitSpanList)
-                .also(::setExitSharedElementCallback)
-            )
+                .also(::initExitSharedElementCallback))
 
         val controller = SpanAnimationController(binding.rvAnimation).apply {
             // setSpanCounts(2, 3, 4, 8)
@@ -84,16 +83,14 @@ class SpanAnimationActivity : AppCompatActivity() {
         adapter.submitList(list)
     }
 
-    private fun setExitSharedElementCallback(adapter: ListAdapter<SpanItem, *>) {
+    private fun initExitSharedElementCallback(adapter: ListAdapter<SpanItem, *>) {
         var pendingPosition = -1
-        ContentPreviewHelper.contentIdEvent
-            .onEach { contentId ->
-                pendingPosition = adapter.currentList.indexOfFirst {
-                    it is SpanItem.Content && it.id == contentId
-                }
-                adapter.recyclerView?.scrollToPosition(pendingPosition)
+        ContentPreviewHelper.contentIdEvent.onEach { contentId ->
+            pendingPosition = adapter.currentList.indexOfFirst {
+                it is SpanItem.Content && it.id == contentId
             }
-            .launchIn(lifecycleScope)
+            adapter.recyclerView?.scrollToPosition(pendingPosition)
+        }.launchIn(lifecycleScope)
 
         setExitSharedElementCallback(object : SharedElementCallback() {
             override fun onMapSharedElements(

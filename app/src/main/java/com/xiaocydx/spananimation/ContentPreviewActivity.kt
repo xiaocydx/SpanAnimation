@@ -47,15 +47,6 @@ class ContentPreviewActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val params = ContentPreviewHelper.consumeParams() ?: return finish()
-
-        window.requestFeature(Window.FEATURE_ACTIVITY_TRANSITIONS)
-        window.sharedElementEnterTransition = TransitionSet().apply {
-            duration = 250
-            interpolator = FastOutSlowInInterpolator()
-            addTransition(ChangeBounds())
-            addTransition(ChangeImageTransform())
-        }
-
         val requestManager = Glide.with(this)
         val viewPager = ViewPager2(this).apply {
             adapter = ContentPreviewAdapter(requestManager).apply {
@@ -63,17 +54,28 @@ class ContentPreviewActivity : AppCompatActivity() {
                 doOnSimpleItemClick { finishAfterTransition() }
             }
             setBackgroundColor(Color.BLACK)
-            withLayoutParams(matchParent, matchParent)
             setPageTransformer(MarginPageTransformer(5.dp))
             setCurrentItem(params.position, false)
+            withLayoutParams(matchParent, matchParent)
         }
-        setEnterSharedElementCallback(viewPager)
+        initSharedElementEnterTransition()
+        initEnterSharedElementCallback(viewPager)
         postponeEnterTransition(requestManager, viewPager)
         setContentView(viewPager)
     }
 
+    private fun initSharedElementEnterTransition() {
+        window.requestFeature(Window.FEATURE_ACTIVITY_TRANSITIONS)
+        window.sharedElementEnterTransition = TransitionSet().apply {
+            duration = 250
+            interpolator = FastOutSlowInInterpolator()
+            addTransition(ChangeBounds())
+            addTransition(ChangeImageTransform())
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
-    private fun setEnterSharedElementCallback(viewPager: ViewPager2) {
+    private fun initEnterSharedElementCallback(viewPager: ViewPager2) {
         val adapter = requireNotNull(viewPager.adapter as? ListAdapter<SpanItem.Content, *>)
 
         // 发送事件同步当前位置的contentId
