@@ -17,13 +17,18 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
  * @author xcc
  * @date 2022/12/18
  */
-class SpanAnimationController(internal val rv: RecyclerView) {
+class SpanAnimationController(rv: RecyclerView) {
+    private var rv: RecyclerView? = rv
     private var spanCounts = emptyList<Int>()
     private var handler: SpanScaleGestureHandler? = null
     private var provider: (ViewHolder.() -> CapturedResult) = defaultProvider
-    private val drawable = rv.spanAnimationDrawable
+    private val drawable = SpanAnimationDrawable()
     private val layoutManager: GridLayoutManager?
-        get() = rv.layoutManager as? GridLayoutManager
+        get() = rv?.layoutManager as? GridLayoutManager
+
+    init {
+        rv.resetSpanAnimationDrawable(drawable)
+    }
 
     /**
      * 动画是否运行中
@@ -42,6 +47,7 @@ class SpanAnimationController(internal val rv: RecyclerView) {
      * 设置绘制中Bitmap提供者，用于替换已有的捕获结果
      */
     fun setDrawingProvider(provider: ViewHolder.() -> Bitmap?) {
+        val rv = rv ?: return
         drawable.drawingProvider = { provider(rv.getChildViewHolder(it)) }
     }
 
@@ -70,8 +76,9 @@ class SpanAnimationController(internal val rv: RecyclerView) {
      * 设置是否启用缩放手势
      */
     fun setScaleGestureEnabled(isEnabled: Boolean) {
+        val rv = rv ?: return
         if (isEnabled && handler == null) {
-            handler = SpanScaleGestureHandler(this)
+            handler = SpanScaleGestureHandler(rv, drawable, ::capture, ::getSpanCount)
             rv.addOnItemTouchListener(handler!!)
         }
         handler?.isEnabled = isEnabled
@@ -89,9 +96,11 @@ class SpanAnimationController(internal val rv: RecyclerView) {
      * 从当前spanCount过渡到[spanCount]
      */
     fun go(spanCount: Int) {
-        val lm = layoutManager ?: return
+        val rv = rv
+        val lm = layoutManager
+        if (rv == null || lm == null) return
         if (lm.spanCount == spanCount || spanCount < 1) return
-        SpanAnimationRunner(spanCount, rv, lm, provider).start()
+        SpanAnimationRunner(spanCount, rv, lm, drawable, provider).start()
     }
 
     fun increase() {
@@ -102,7 +111,16 @@ class SpanAnimationController(internal val rv: RecyclerView) {
         layoutManager?.let { go(getSpanCount(it.spanCount, sign = -1)) }
     }
 
-    internal fun getSpanCount(spanCount: Int, sign: Int): Int {
+    fun dispose() {
+        val rv = rv ?: return
+        handler?.let(rv::removeOnItemTouchListener)
+        drawable.end()
+        rv.clearSpanAnimationDrawable(drawable)
+        handler = null
+        this.rv = null
+    }
+
+    private fun getSpanCount(spanCount: Int, sign: Int): Int {
         require(sign == 1 || sign == -1)
         var index = spanCounts.indexOf(spanCount)
         if (index == -1) return (spanCount + sign)
@@ -110,10 +128,12 @@ class SpanAnimationController(internal val rv: RecyclerView) {
         return spanCounts.getOrNull(index) ?: spanCount
     }
 
-    internal fun capture(spanCount: Int) {
-        val lm = layoutManager ?: return
+    private fun capture(spanCount: Int) {
+        val rv = rv
+        val lm = layoutManager
+        if (rv == null || lm == null) return
         if (lm.spanCount == spanCount || spanCount < 1) return
-        SpanAnimationRunner(spanCount, rv, lm, provider).capture()
+        SpanAnimationRunner(spanCount, rv, lm, drawable, provider).capture()
     }
 
     private companion object {

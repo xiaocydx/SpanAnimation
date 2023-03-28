@@ -11,16 +11,26 @@ import androidx.core.animation.addListener
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 
-internal val RecyclerView.spanAnimationDrawable: SpanAnimationDrawable
-    get() {
-        var drawable = getTag(R.id.tag_span_animation_drawable) as? SpanAnimationDrawable
-        if (drawable == null) {
-            drawable = SpanAnimationDrawable()
-            overlay.add(drawable)
-            setTag(R.id.tag_span_animation_drawable, drawable)
-        }
-        return drawable
+internal fun RecyclerView.resetSpanAnimationDrawable(drawable: SpanAnimationDrawable) {
+    val id = R.id.tag_span_animation_drawable
+    val existed = getTag(id) as? SpanAnimationDrawable
+    if (existed != null) {
+        existed.end()
+        overlay.remove(existed)
     }
+    overlay.add(drawable)
+    setTag(id, drawable)
+}
+
+internal fun RecyclerView.clearSpanAnimationDrawable(drawable: SpanAnimationDrawable) {
+    val id = R.id.tag_span_animation_drawable
+    val existed = getTag(id) as? SpanAnimationDrawable
+    if (existed === drawable) {
+        existed.end()
+        overlay.remove(existed)
+        setTag(id, null)
+    }
+}
 
 internal class SpanAnimationDrawable : Drawable() {
     private val dstRectF = RectF()
@@ -53,6 +63,10 @@ internal class SpanAnimationDrawable : Drawable() {
             interpolator = animationInterpolator
             setFloatValues(0f, 1f)
         }
+    }
+
+    fun end() {
+        endAnimation(allowClear = true)
     }
 
     fun setFraction(fraction: Float) {

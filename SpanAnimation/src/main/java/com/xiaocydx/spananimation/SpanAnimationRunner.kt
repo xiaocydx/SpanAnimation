@@ -20,6 +20,7 @@ internal class SpanAnimationRunner(
     private val spanCount: Int,
     private val rv: RecyclerView,
     private val lm: GridLayoutManager,
+    private val drawable: SpanAnimationDrawable,
     private val provider: ViewHolder.() -> CapturedResult
 ) {
 
@@ -61,14 +62,11 @@ internal class SpanAnimationRunner(
             rv.doOnPreDraw {
                 val endSpanCount = lm.spanCount
                 val endValues = rv.captureEndValues(startValues)
-
                 if (!matchAnimationValues(startSpanCount, endSpanCount, startValues, endValues)) {
                     startValues.clear()
                     endValues.clear()
                     return@doOnPreDraw
                 }
-
-                val drawable = rv.spanAnimationDrawable
                 drawable.setBounds(0, 0, rv.width, rv.height)
                 drawable.begin(SpanAnimationInfo(startValues), SpanAnimationInfo(endValues), start)
             }

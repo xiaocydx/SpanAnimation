@@ -11,10 +11,11 @@ import androidx.recyclerview.widget.RecyclerView
  * @date 2022/12/18
  */
 internal class SpanScaleGestureHandler(
-    private val controller: SpanAnimationController
+    private val rv: RecyclerView,
+    private val drawable: SpanAnimationDrawable,
+    private val capture: (spanCount: Int) -> Unit,
+    private val transform: (spanCount: Int, sign: Int) -> Int
 ) : RecyclerView.OnItemTouchListener {
-    private val rv = controller.rv
-    private val drawable = rv.spanAnimationDrawable
     private val listener = OnScaleGestureListenerImpl()
     private val detector = ScaleGestureDetector(rv.context, listener)
     var isEnabled = false
@@ -71,25 +72,25 @@ internal class SpanScaleGestureHandler(
             val lm = rv.layoutManager as? GridLayoutManager
             if (lm != null && !captured && detector.scaleFactor != 1f) {
                 val sign = if (detector.scaleFactor > 1f) -1 else 1
-                val spanCount = controller.getSpanCount(lm.spanCount, sign)
+                val spanCount = transform(lm.spanCount, sign)
                 if (spanCount != lm.spanCount && spanCount >= 1) {
                     minToMax = detector.scaleFactor > 1f
                     scale = if (minToMax) MIN_SCALE else MAX_SCALE
                     restoreState = lm.onSaveInstanceState()
                     restoreSpanCount = lm.spanCount
-                    controller.capture(spanCount)
+                    capture(spanCount)
                 }
                 captured = true
             }
             if (drawable.isInitialized) {
                 scale *= detector.scaleFactor
                 scale = scale.coerceAtLeast(MIN_SCALE).coerceAtMost(MAX_SCALE)
-                val progress = if (minToMax) {
+                val fraction = if (minToMax) {
                     (scale - MIN_SCALE) / (MAX_SCALE - MIN_SCALE)
                 } else {
                     (MAX_SCALE - scale) / (MAX_SCALE - MIN_SCALE)
                 }
-                drawable.setFraction(progress)
+                drawable.setFraction(fraction)
             }
             return true
         }
